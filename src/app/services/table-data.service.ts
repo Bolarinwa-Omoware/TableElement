@@ -16,7 +16,6 @@ const httpOptions = {
 export class TableDataService {
 
   constructor(private http: HttpClient) { }
-
   
   getGeoFeatureProperty(url:string): Observable<any> {
     return this.http.get(baseURL+'mongodbServer/'+url, httpOptions).pipe(

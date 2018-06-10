@@ -37,12 +37,10 @@ export class PopupTableComponent implements OnInit, AfterViewInit {
     }else{
       
       
-      console.log();
+      
       this.dataSource.data= this.realData;
       this.dataSource.paginator = this.paginator;
 
-     
-     
 
     }
     
@@ -82,7 +80,7 @@ export class PopupTableComponent implements OnInit, AfterViewInit {
 
     this._tableService.getGeoFeatureProperty(this.url).subscribe(res=>{
       source = res;
-      console.log(source.ADDRESS);
+      console.log(source);
 
       for (let i = 0; i < fieldFilter.length; i++) {
         if(source[fieldFilter[i]._id]=== undefined){
@@ -96,19 +94,7 @@ export class PopupTableComponent implements OnInit, AfterViewInit {
     })
     return result;
   }
-  // loadData(){
-  //   this.loaded = true;
-  //   this.notLoaded =false;
-  //   if (!this.url || this.url.length === 0) {
-  //     console.error(`url attribute must be provided!`);
-  //   }else{
-      
-  //     // this.dataSource.data= this.realData;
-  //     console.log();
-     
 
-  //   }
-  // }
 
 
   sortData4Popup(){
@@ -125,6 +111,8 @@ export interface FieldSorter{
   _id: string;
   fieldName: string;
 }
+
+
 
 
 const ELEMENT_DATA = [
