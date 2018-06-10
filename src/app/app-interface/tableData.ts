@@ -24,5 +24,10 @@ export interface IllegalExtData{
   AMT_PAYABL: number;
   DELIV_STAT: string;
   REMARK: string;
-  
+
+}
+
+export interface FieldSorter {
+  _id: string;
+  fieldName: string;
 }

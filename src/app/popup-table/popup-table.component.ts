@@ -1,7 +1,9 @@
 import { AfterViewInit, Component, Input, OnInit, ViewChild, ViewEncapsulation } from '@angular/core';
-import { MatPaginator, MatTableDataSource } from '@angular/material';
+import { MatPaginator, MatTableDataSource, MatSort } from '@angular/material';
 import { PeriodicElement } from '../app-interface/tableData';
 import { TableDataService } from '../services/table-data.service';
+import { merge, Observable, of as observableOf } from 'rxjs';
+import { catchError, map, startWith, switchMap } from 'rxjs/operators';
 
 
 
@@ -17,30 +19,49 @@ export class PopupTableComponent implements OnInit, AfterViewInit {
   @Input()
   url:string;
 
-  loaded:boolean = false;
-  notLoaded:boolean = true;
-
-
-  dataSource = new MatTableDataSource<PeriodicElement>(ELEMENT_DATA);
-  realData;
+  resultsLength = 0;
+  isLoadingResults = true;
+  isRateLimitReached = false;
+  data = new MatTableDataSource<PeriodicElement>();
 
   @ViewChild(MatPaginator) paginator: MatPaginator;
+  @ViewChild(MatSort) sort: MatSort;
 
 
   constructor(private _tableService:TableDataService) { }
 
   ngOnInit() {
-    this.realData= this.sourceData();
-
+    
     if (!this.url || this.url.length === 0) {
       console.error(`url attribute must be provided!`);
     }else{
       
-      
-      
-      this.dataSource.data= this.realData;
-      this.dataSource.paginator = this.paginator;
+      // If the user changes the sort order, reset back to the first page.
+      // this.sort.sortChange.subscribe(() => this.paginator.pageIndex = 0);
+      merge()
+      .pipe(
+        startWith({}),
+        switchMap(()=>{
+          this.isLoadingResults = true;
+          return this._tableService.getGeoFeatureProperty(this.url);
+        }),
+        map(data =>{
+          // Flip flag to show that loading has finished.
+          this.isLoadingResults = false;
+          this.isRateLimitReached = false;
+          this.resultsLength = data.length;
 
+          return data;
+        }),
+        catchError(()=>{
+          // Catch if the GitHub API has reached its rate limit. Return empty data.
+          this.isRateLimitReached = true;
+          return observableOf([]);
+        })
+      ).subscribe(data => {
+        this.data.data = data
+        this.data.paginator = this.paginator;
+      });
 
     }
     
@@ -51,49 +72,42 @@ export class PopupTableComponent implements OnInit, AfterViewInit {
   }
 
   
-  public sourceData() : PeriodicElement[] {
+  // public sourceData() : PeriodicElement[] {
 
-    const result:PeriodicElement[]= [];
+  //   const result:PeriodicElement[]= [];
 
-    const fieldFilter: FieldSorter[]= [
-      {_id: "ESTATE", fieldName: "ESTATE NAME"},
-      {_id: "BLOCK_ID", fieldName: "BLOCK ID"},
-      {_id: "Ex_PLOT_NO", fieldName: "EXCESS PLOT"},
-      {_id: "STREET_NAM", fieldName: "STREET NAME"},
-      {_id: "ADDRESS", fieldName: "ADDRESS"},
-      {_id: "EX_SIZE", fieldName: "EXCESS AREA TAKEN"},
-      {_id: "ADM_CHARGE", fieldName: "ADMINISTRATIVE CHARGES"},
-      {_id: "ANN_GRent", fieldName: "ANNUAL GROUND RENT"},
-      {_id: "CAP_CONB", fieldName: "CAPITAL CONTRIBUTION"},
-      {_id: "LandCharge", fieldName: "LAND CHARGES"},
-      {_id: "NOR_PREMIU", fieldName: "NORMAL PREMIUM"},
-      {_id: "RATE_PSqM", fieldName: "RATE PER SQ. METERS"},
-      {_id: "STAMP_DUTY", fieldName: "STAMP DUTY "},
-      {_id: "RegConvFee", fieldName: "REGISTRATION FEE "},
-      {_id: "SURVEY_FEE", fieldName: " SURVEY FEE "},
-      {_id: "AMT_PAYABL", fieldName: " AMOUNT PAYABLE  "},
-      {_id: "DELIV_STAT", fieldName: " DELIVERY STATUS  "},
-      {_id: "REMARK", fieldName: " REMARK "}
-    ]
+  //   const fieldFilter: FieldSorter[]= [
+  //     {_id: "ESTATE", fieldName: "ESTATE NAME"},
+  //     {_id: "BLOCK_ID", fieldName: "BLOCK ID"},
+  //     {_id: "Ex_PLOT_NO", fieldName: "EXCESS PLOT"},
+  //     {_id: "STREET_NAM", fieldName: "STREET NAME"},
+  //     {_id: "ADDRESS", fieldName: "ADDRESS"},
+  //     {_id: "EX_SIZE", fieldName: "EXCESS AREA TAKEN"},
+  //     {_id: "ADM_CHARGE", fieldName: "ADMINISTRATIVE CHARGES"},
+  //     {_id: "ANN_GRent", fieldName: "ANNUAL GROUND RENT"},
+  //     {_id: "CAP_CONB", fieldName: "CAPITAL CONTRIBUTION"},
+  //     {_id: "LandCharge", fieldName: "LAND CHARGES"},
+  //     {_id: "NOR_PREMIU", fieldName: "NORMAL PREMIUM"},
+  //     {_id: "RATE_PSqM", fieldName: "RATE PER SQ. METERS"},
+  //     {_id: "STAMP_DUTY", fieldName: "STAMP DUTY "},
+  //     {_id: "RegConvFee", fieldName: "REGISTRATION FEE "},
+  //     {_id: "SURVEY_FEE", fieldName: " SURVEY FEE "},
+  //     {_id: "AMT_PAYABL", fieldName: " AMOUNT PAYABLE  "},
+  //     {_id: "DELIV_STAT", fieldName: " DELIVERY STATUS  "},
+  //     {_id: "REMARK", fieldName: " REMARK "}
+  //   ]
 
-    let source;
+  //   let source;
 
-    this._tableService.getGeoFeatureProperty(this.url).subscribe(res=>{
-      source = res;
-      console.log(source);
+  //   this._tableService.getGeoFeatureProperty(this.url).subscribe(res=>{
+  //     source = res;
+  //     console.log(source);
 
-      for (let i = 0; i < fieldFilter.length; i++) {
-        if(source[fieldFilter[i]._id]=== undefined){
-          continue
-        }else{
-          result.push({position: i+1, name:fieldFilter[i].fieldName, detail: source[fieldFilter[i]._id]});
-        }
-        
-      }
+
       
-    })
-    return result;
-  }
+  //   })
+  //   return result;
+  // }
 
 
 
@@ -107,10 +121,7 @@ export class PopupTableComponent implements OnInit, AfterViewInit {
   
 }
 
-export interface FieldSorter{
-  _id: string;
-  fieldName: string;
-}
+
 
 
 
